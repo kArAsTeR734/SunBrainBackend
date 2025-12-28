@@ -1,0 +1,71 @@
+import 'dotenv/config';
+import express from 'express';
+import cookieParser from 'cookie-parser';
+import cors from 'cors';
+import authRoutes from './routes/AuthRoutes/auth-routes.js';
+
+const app = express();
+
+const allowedOrigins = [
+    'http://localhost:3000',
+    'http://localhost:3031',
+    'http://localhost:3030',
+    'http://localhost:5173',
+    'http://localhost:8080'
+];
+
+app.use(cors({
+    origin: function (origin, callback) {
+        if (!origin) return callback(null, true);
+
+        if (allowedOrigins.indexOf(origin) === -1) {
+            const msg = `CORS политика не разрешает доступ с origin: ${origin}`;
+            return callback(new Error(msg), false);
+        }
+
+        return callback(null, true);
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+}));
+app.use(cookieParser());
+app.use(express.json());
+
+app.use((req, res, next) => {
+    console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+    next();
+});
+
+app.use('/api/auth', authRoutes);
+
+// Health check
+app.get('/health', (req, res) => {
+    res.json({
+        status: 'OK',
+        timestamp: new Date().toISOString()
+    });
+});
+
+app.use((error, req, res, next) => {
+    console.error('Ошибка:', error);
+
+    const status = error.status || 500;
+    const message = error.message || 'Внутренняя ошибка сервера';
+
+    res.status(status).json({
+        success: false,
+        message,
+        ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
+    });
+});
+
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+    console.log(`🚀 Сервер запущен на порту ${PORT}`);
+    console.log(`📝 Документация API:`);
+    console.log(`   POST http://localhost:${PORT}/api/auth/register`);
+    console.log(`   POST http://localhost:${PORT}/api/auth/login`);
+    console.log(`   POST http://localhost:${PORT}/api/auth/refresh`);
+    console.log(`   GET  http://localhost:${PORT}/api/auth/me`);
+});

@@ -3,6 +3,7 @@ import express from 'express';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import authRoutes from './routes/AuthRoutes/auth-routes.js';
+import profileRoutes from "./routes/ProfileRoutes/profile-routes.js";
 
 const app = express();
 
@@ -38,8 +39,8 @@ app.use((req, res, next) => {
 });
 
 app.use('/api/auth', authRoutes);
+app.use('/api/profile',profileRoutes)
 
-// Health check
 app.get('/health', (req, res) => {
     res.json({
         status: 'OK',

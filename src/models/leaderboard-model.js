@@ -27,6 +27,22 @@ class LeaderboardModel {
     );
     return result.rows[0];
   }
+
+  static async getUserPosition(userId) {
+    const result = await pool.query(
+        `SELECT
+             COUNT(*) + 1 as position
+         FROM leaderboard l2
+         WHERE l2.total_points > (
+             SELECT total_points
+             FROM leaderboard
+             WHERE user_id = $1
+             )`,
+        [userId]
+    );
+
+    return parseInt(result.rows[0]?.position) || 1;
+  }
 }
 
 export default LeaderboardModel;

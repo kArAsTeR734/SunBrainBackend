@@ -41,13 +41,6 @@ app.use((req, res, next) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/profile',profileRoutes)
 
-app.get('/health', (req, res) => {
-    res.json({
-        status: 'OK',
-        timestamp: new Date().toISOString()
-    });
-});
-
 app.use((error, req, res, next) => {
     console.error('Ошибка:', error);
 

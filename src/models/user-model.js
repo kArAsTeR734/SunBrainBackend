@@ -66,44 +66,55 @@ class UserModel {
         return result.rows[0].exists;
     }
 
-    static async getProfile(id) {
-        const result = await pool.query(
-          `SELECT 
-                id, 
-                email, 
-                full_name, 
-                role,
-                avatar_url,
+  static async getProfile(id) {
+    const result = await pool.query(
+        `SELECT
+             id,
+             email,
+             full_name,
+             role,
+             avatar_url,  
                 created_at
-             FROM users WHERE id = $1`,
-          [id]
-        );
-        return result.rows[0];
-    }
+         FROM users WHERE id = $1`,
+        [id]
+    );
+    return result.rows[0];
+  }
 
-    static async updateProfile(id, { fullName, avatarUrl }) {
-        const result = await pool.query(
-          `UPDATE users 
-             SET 
-                full_name = COALESCE($2, full_name),
-                avatar_url = COALESCE($3, avatar_url)
+  static async updateProfile(id, { fullName, avatarUrl }) {
+    const result = await pool.query(
+        `UPDATE users
+         SET
+             full_name = COALESCE($2, full_name),
+             avatar_url = COALESCE($3, avatar_url) 
+         WHERE id = $1
+             RETURNING id, email, full_name, avatar_url`,
+        [id, fullName, avatarUrl]
+    );
+    return result.rows[0];
+  }
+
+  static async updateAvatar(id, avatarUrl) {
+    const result = await pool.query(
+        `UPDATE users 
+             SET avatar_url = $2  
              WHERE id = $1 
              RETURNING id, email, full_name, avatar_url`,
-          [id, fullName, avatarUrl]
-        );
-        return result.rows[0];
-    }
+        [id, avatarUrl]
+    );
+    return result.rows[0];
+  }
 
-    static async updateAvatar(id, avatarUrl) {
-        const result = await pool.query(
-          `UPDATE users 
-             SET avatar_url = $2
+  static async deleteAvatar(id) {
+    const result = await pool.query(
+        `UPDATE users 
+             SET avatar_url = NULL
              WHERE id = $1 
-             RETURNING id, email, full_name, avatar_url`,
-          [id, avatarUrl]
-        );
-        return result.rows[0];
-    }
+             RETURNING id, email, full_name`,
+        [id]
+    );
+    return result.rows[0];
+  }
 }
 
 export default UserModel;

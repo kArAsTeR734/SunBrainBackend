@@ -30,7 +30,6 @@ class AuthService {
                 email: user.email,
                 fullName: user.full_name,
                 role: user.role,
-                createdAt: user.created_at
             },
             tokens
         };
@@ -47,10 +46,8 @@ class AuthService {
             throw new ApiError(401, 'Неверный email или пароль');
         }
 
-        // Генерируем токены
         const tokens = TokenService.generateTokens(user);
 
-        // Обновляем refresh токен в БД
         await UserModel.updateRefreshToken(user.id, tokens.refreshToken);
 
         return {
@@ -64,13 +61,11 @@ class AuthService {
         };
     }
 
-    // Выход
     static async logout(userId) {
         await UserModel.removeRefreshToken(userId);
         return { message: 'Вы успешно вышли из системы' };
     }
 
-    // Обновление токенов
     static async refresh(refreshToken) {
         if (!refreshToken) {
             throw new ApiError(401, 'Refresh токен отсутствует');

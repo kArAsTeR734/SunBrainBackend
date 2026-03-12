@@ -1,4 +1,5 @@
-import ProfileService from '../services/profile-service.js';
+import ProfileService from "../services/profile-service.js";
+import {errorResponse, successResponse} from "../utils/ApiError.js";
 
 class ProfileController {
   static async getProfile(req, res) {
@@ -6,18 +7,18 @@ class ProfileController {
       const userId = req.userId;
       const profileData = await ProfileService.getProfileData(userId);
 
-      res.status(200).json({
-        success: true,
-        data: profileData
-      });
+      res.status(200).json(
+        successResponse(profileData)
+      );
+
     } catch (error) {
-      console.error('Profile error:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Ошибка при получении профиля'
-      });
+      console.error(error);
+
+      res.status(500).json(
+        errorResponse('Ошибка при получении профиля')
+      );
     }
   }
 }
 
-export default ProfileController;
+export default ProfileController

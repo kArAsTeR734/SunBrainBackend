@@ -1,10 +1,13 @@
 import { jwtConfig } from '../config/jwt.config.js';
 import AuthService from '../services/auth-service.js';
+import {successResponse} from "../utils/ApiError.js";
 
 class AuthController {
+
     static async registration(req, res, next) {
         try {
             const { email, password, fullName, role } = req.body;
+
             const result = await AuthService.register({
                 email,
                 password,
@@ -12,22 +15,25 @@ class AuthController {
                 role
             });
 
-            res.cookie('refreshToken', result.tokens.refreshToken, jwtConfig.cookieOptions);
+            res.cookie(
+              'refreshToken',
+              result.tokens.refreshToken,
+              jwtConfig.cookieOptions
+            );
 
-            res.status(201).json({
-                success: true,
-                message: 'Регистрация прошла успешно',
-                data: {
-                    user: result.user,
-                    accessToken: result.tokens.accessToken
-                }
-            });
+            res.status(201).json(
+              successResponse({
+                  user: result.user,
+                  accessToken: result.tokens.accessToken,
+                  refreshToken: result.tokens.refreshToken
+              })
+            );
+
         } catch (error) {
             next(error);
         }
     }
 
-    // Вход
     static async login(req, res, next) {
         try {
             const { email, password } = req.body;
@@ -37,16 +43,20 @@ class AuthController {
                 password
             });
 
-            res.cookie('refreshToken', result.tokens.refreshToken, jwtConfig.cookieOptions);
+            res.cookie(
+              'refreshToken',
+              result.tokens.refreshToken,
+              jwtConfig.cookieOptions
+            );
 
-            res.status(200).json({
-                success: true,
-                message: 'Вход выполнен успешно',
-                data: {
-                    user: result.user,
-                    accessToken: result.tokens.accessToken
-                }
-            });
+            res.status(200).json(
+              successResponse({
+                  user: result.user,
+                  accessToken: result.tokens.accessToken,
+                  refreshToken: result.tokens.refreshToken
+              })
+            );
+
         } catch (error) {
             next(error);
         }
@@ -54,16 +64,16 @@ class AuthController {
 
     static async logout(req, res, next) {
         try {
-            const userId = req.userId; // Из middleware
+            const userId = req.userId;
+
             const result = await AuthService.logout(userId);
 
-            // Удаляем cookie
             res.clearCookie('refreshToken');
 
-            res.status(200).json({
-                success: true,
-                message: result.message
-            });
+            res.status(200).json(
+              successResponse(null, result.message)
+            );
+
         } catch (error) {
             next(error);
         }
@@ -75,17 +85,20 @@ class AuthController {
 
             const result = await AuthService.refresh(refreshToken);
 
-            // Устанавливаем новый refresh токен в cookie
-            res.cookie('refreshToken', result.tokens.refreshToken, jwtConfig.cookieOptions);
+            res.cookie(
+              'refreshToken',
+              result.tokens.refreshToken,
+              jwtConfig.cookieOptions
+            );
 
-            res.status(200).json({
-                success: true,
-                message: 'Токены обновлены',
-                data: {
-                    user: result.user,
-                    accessToken: result.tokens.accessToken
-                }
-            });
+            res.status(200).json(
+              successResponse({
+                  user: result.user,
+                  accessToken: result.tokens.accessToken,
+                  refreshToken: result.tokens.refreshToken
+              })
+            );
+
         } catch (error) {
             next(error);
         }
@@ -94,12 +107,13 @@ class AuthController {
     static async getCurrentUser(req, res, next) {
         try {
             const userId = req.userId;
+
             const user = await AuthService.getCurrentUser(userId);
 
-            res.status(200).json({
-                success: true,
-                data: user
-            });
+            res.status(200).json(
+              successResponse(user)
+            );
+
         } catch (error) {
             next(error);
         }
@@ -108,6 +122,7 @@ class AuthController {
     static async validate(req, res, next) {
         try {
             const authHeader = req.headers.authorization;
+
             if (!authHeader) {
                 return res.status(401).json({
                     success: false,
@@ -116,12 +131,13 @@ class AuthController {
             }
 
             const token = authHeader.split(' ')[1];
+
             const userData = AuthService.validateToken(token);
 
-            res.status(200).json({
-                success: true,
-                data: userData
-            });
+            res.status(200).json(
+              successResponse(userData)
+            );
+
         } catch (error) {
             next(error);
         }

@@ -4,11 +4,13 @@ import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import authRoutes from './routes/AuthRoutes/auth-routes.js';
 import profileRoutes from "./routes/ProfileRoutes/profile-routes.js";
+import homeworkRoutes from "./routes/homework-routes.js";
 
 const app = express();
 
 const allowedOrigins = [
     'http://localhost:3000',
+    'http://localhost:3001',
     'http://localhost:3031',
     'http://localhost:3030',
     'http://localhost:5173',
@@ -40,6 +42,7 @@ app.use((req, res, next) => {
 
 app.use('/api/auth', authRoutes);
 app.use('/api/profile',profileRoutes)
+app.use('/api/homework', homeworkRoutes)
 
 app.get('/health', (req, res) => {
     res.json({
@@ -69,4 +72,5 @@ app.listen(PORT, () => {
     console.log(`   POST http://localhost:${PORT}/api/auth/login`);
     console.log(`   POST http://localhost:${PORT}/api/auth/refresh`);
     console.log(`   GET  http://localhost:${PORT}/api/auth/me`);
+    console.log(`   GET  http://localhost:${PORT}/api/homework/my`);
 });

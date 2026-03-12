@@ -9,7 +9,7 @@ router.post('/login', AuthController.login);
 router.post('/refresh', AuthController.refresh);
 router.get('/validate', AuthController.validate);
 
-router.post('/logout', authMiddleware, AuthController.logout);
+router.post('/logout', AuthController.logout);
 router.get('/me', authMiddleware, AuthController.getCurrentUser);
 
 router.get('/admin', authMiddleware, roleMiddleware('admin'), (req, res) => {

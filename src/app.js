@@ -5,6 +5,8 @@ import cors from 'cors';
 import authRoutes from './routes/AuthRoutes/auth-routes.js';
 import profileRoutes from "./routes/ProfileRoutes/profile-routes.js";
 import homeworkRoutes from "./routes/homework-routes.js";
+import taskRouter from "./routes/task-routes.js";
+import topicRouter from "./routes/topic-routes.js";
 
 const app = express();
 
@@ -42,7 +44,9 @@ app.use((req, res, next) => {
 
 app.use('/api/auth', authRoutes);
 app.use('/api/profile',profileRoutes)
+app.use('/api/task', taskRouter);
 app.use('/api/homework', homeworkRoutes)
+app.use('/api/topics', topicRouter)
 
 app.use((error, req, res, next) => {
     console.error('Ошибка:', error);

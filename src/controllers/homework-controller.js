@@ -1,7 +1,24 @@
 import HomeworkService from '../services/homework-service.js';
 import {errorResponse, successResponse} from "../utils/ApiError.js";
+import TaskModel from "../models/task-model.js";
 
 class HomeworkController {
+
+  static async checkTaskAnswer(req, res) {
+    const { taskId } = req.params;
+    const { answer } = req.body;
+
+    const task = await TaskModel.getTaskById(taskId);
+
+    const correct = task.correct_answer === answer;
+
+    res.json(
+      successResponse({
+        correct,
+        points: correct ? task.points : 0
+      })
+    );
+  }
 
   static async getMyHomeworks(req, res) {
     try {

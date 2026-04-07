@@ -4,11 +4,7 @@ class HomeworkService {
 
   static async getMyHomeworks(userId) {
 
-    console.log('USER ID:', userId);
-
     const homeworks = await HomeworkModel.getUserHomeworks(userId);
-
-    console.log('HOMEWORKS:', homeworks);
 
     return {
       homeworks: homeworks.map(hw => ({
@@ -23,7 +19,7 @@ class HomeworkService {
 
   static async getHomework(homeworkId) {
 
-    const homework = await HomeworkModel.getHomework(homeworkId);
+    const homework = await HomeworkModel.getHomeworkById(homeworkId);
 
     const tasks = await HomeworkModel.getHomeworkTasks(homeworkId);
 
@@ -31,10 +27,18 @@ class HomeworkService {
       id: homework.id,
       title: homework.title,
       deadline: homework.deadline,
+
+      topic: {
+        id: homework.topic_id,
+        number: homework.topic_number,
+        name: homework.topic_name,
+        code: homework.topic_code
+      },
+
       tasks: tasks.map((task, index) => ({
         id: task.id,
         number: index + 1,
-        question: task.question,
+        question: task.content,
         points: task.points
       }))
     };

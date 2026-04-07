@@ -26,29 +26,43 @@ export default class HomeworkModel {
   }
 
   static async getHomeworkById(homeworkId) {
+
     const query = `
-        SELECT *
-        FROM homeworks
-        WHERE id = $1
-    `;
+    SELECT
+      h.id,
+      h.title,
+      h.deadline,
+
+      t.id as topic_id,
+      t.name as topic_name,
+      t.subject_code as topic_code,
+      t.number as topic_number
+
+    FROM homeworks h
+    JOIN topics t ON t.id = h.topic_id
+    WHERE h.id = $1
+  `;
 
     const { rows } = await pool.query(query, [homeworkId]);
+
     return rows[0];
   }
 
   static async getHomeworkTasks(homeworkId) {
+
     const query = `
-        SELECT 
-            t.id,
-            t.question,
-            t.points
-        FROM homework_tasks ht
-        JOIN tasks t ON t.id = ht.task_id
-        WHERE ht.homework_id = $1
-        ORDER BY ht.order_index
-    `;
+    SELECT 
+        ht.task_id AS id,
+        t.content,
+        t.points
+    FROM homework_tasks ht
+    LEFT JOIN tasks t ON t.id = ht.task_id
+    WHERE ht.homework_id = $1
+    ORDER BY ht.order_index ASC, ht.task_id ASC
+  `;
 
     const { rows } = await pool.query(query, [homeworkId]);
+
     return rows;
   }
 

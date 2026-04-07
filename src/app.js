@@ -1,12 +1,18 @@
 import 'dotenv/config';
+
 import express from 'express';
+import path from "path";
+
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
-import authRoutes from './routes/AuthRoutes/auth-routes.js';
-import profileRoutes from "./routes/ProfileRoutes/profile-routes.js";
+
+import authRoutes from './routes/auth-routes.js';
+import profileRoutes from "./routes/profile-routes.js";
 import homeworkRoutes from "./routes/homework-routes.js";
 import taskRouter from "./routes/task-routes.js";
 import topicRouter from "./routes/topic-routes.js";
+import leaderboardRoutes from "./routes/leaderboard-routes.js";
+import testRouter from "./routes/test-routes.js";
 
 const app = express();
 
@@ -42,11 +48,14 @@ app.use((req, res, next) => {
     next();
 });
 
+app.use('/uploads', express.static(path.resolve('uploads')));
 app.use('/api/auth', authRoutes);
 app.use('/api/profile',profileRoutes)
-app.use('/api/task', taskRouter);
+app.use('/api/leaderboard',leaderboardRoutes)
+app.use('/api/tasks', taskRouter);
 app.use('/api/homework', homeworkRoutes)
 app.use('/api/topics', topicRouter)
+app.use('/api/tests', testRouter)
 
 app.use((error, req, res, next) => {
     console.error('Ошибка:', error);

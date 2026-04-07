@@ -1,117 +1,93 @@
 import pool from '../config/db.js';
 
 class UserModel {
-    static async findByEmail(email) {
-        const result = await pool.query(
-            'SELECT * FROM users WHERE email = $1',
-            [email]
-        );
-        return result.rows[0];
-    }
+  static async findByEmail(email) {
+    const result = await pool.query(
+      'SELECT * FROM users WHERE email = $1',
+      [email]
+    );
+    return result.rows[0];
+  }
 
-    static async findById(id) {
-        const result = await pool.query(
-            `SELECT id, email, full_name, role, created_at
+  static async findById(id) {
+    const result = await pool.query(
+      `SELECT id, email, full_name, role, created_at
              FROM users WHERE id = $1`,
-            [id]
-        );
-        return result.rows[0];
-    }
+      [id]
+    );
+    return result.rows[0];
+  }
 
-    static async create({ email, passwordHash, fullName, role = 'student' }) {
-        const result = await pool.query(
-            `INSERT INTO users (email, password_hash, full_name, role) 
+  static async create({email, passwordHash, fullName, role = 'student'}) {
+    const result = await pool.query(
+      `INSERT INTO users (email, password_hash, full_name, role) 
              VALUES ($1, $2, $3, $4) 
              RETURNING id, email, full_name, role, created_at`,
-            [email, passwordHash, fullName, role]
-        );
-        return result.rows[0];
-    }
+      [email, passwordHash, fullName, role]
+    );
+    return result.rows[0];
+  }
 
-    static async updateRefreshToken(userId, refreshToken) {
-        const result = await pool.query(
-            `UPDATE users 
+  static async updateRefreshToken(userId, refreshToken) {
+    const result = await pool.query(
+      `UPDATE users 
              SET refresh_token = $2
              WHERE id = $1 
              RETURNING id, email`,
-            [userId, refreshToken]
-        );
-        return result.rows[0];
-    }
+      [userId, refreshToken]
+    );
+    return result.rows[0];
+  }
 
-    static async findByRefreshToken(refreshToken) {
-        const result = await pool.query(
-            `SELECT id, email, full_name, role
+  static async findByRefreshToken(refreshToken) {
+    const result = await pool.query(
+      `SELECT id, email, full_name, role
              FROM users 
              WHERE refresh_token = $1`,
-            [refreshToken]
-        );
-        return result.rows[0];
-    }
+      [refreshToken]
+    );
+    return result.rows[0];
+  }
 
-    static async removeRefreshToken(userId) {
-        await pool.query(
-            `UPDATE users 
+  static async removeRefreshToken(userId) {
+    await pool.query(
+      `UPDATE users 
              SET refresh_token = NULL
              WHERE id = $1`,
-            [userId]
-        );
-    }
+      [userId]
+    );
+  }
 
-    static async emailExists(email) {
-        const result = await pool.query(
-            'SELECT EXISTS(SELECT 1 FROM users WHERE email = $1) as exists',
-            [email]
-        );
-        return result.rows[0].exists;
-    }
+  static async emailExists(email) {
+    const result = await pool.query(
+      'SELECT EXISTS(SELECT 1 FROM users WHERE email = $1) as exists',
+      [email]
+    );
+    return result.rows[0].exists;
+  }
 
   static async getProfile(id) {
     const result = await pool.query(
-        `SELECT
+      `SELECT
              id,
              email,
              full_name,
              role,
              avatar_url,  
-                created_at
+             created_at
          FROM users WHERE id = $1`,
-        [id]
-    );
-    return result.rows[0];
-  }
-
-  static async updateProfile(id, { fullName, avatarUrl }) {
-    const result = await pool.query(
-        `UPDATE users
-         SET
-             full_name = COALESCE($2, full_name),
-             avatar_url = COALESCE($3, avatar_url) 
-         WHERE id = $1
-             RETURNING id, email, full_name, avatar_url`,
-        [id, fullName, avatarUrl]
+      [id]
     );
     return result.rows[0];
   }
 
   static async updateAvatar(id, avatarUrl) {
     const result = await pool.query(
-        `UPDATE users 
+      `UPDATE users 
              SET avatar_url = $2  
              WHERE id = $1 
              RETURNING id, email, full_name, avatar_url`,
-        [id, avatarUrl]
-    );
-    return result.rows[0];
-  }
-
-  static async deleteAvatar(id) {
-    const result = await pool.query(
-        `UPDATE users 
-             SET avatar_url = NULL
-             WHERE id = $1 
-             RETURNING id, email, full_name`,
-        [id]
+      [id, avatarUrl]
     );
     return result.rows[0];
   }

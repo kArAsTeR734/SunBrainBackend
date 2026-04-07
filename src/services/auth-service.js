@@ -2,6 +2,7 @@ import bcrypt from 'bcrypt';
 import ApiError from '../utils/ApiError.js';
 import UserModel from "../models/user-model.js";
 import TokenService from "./token-service.js";
+import LeaderboardModel from "../models/leaderboard-model.js";
 
 class AuthService {
     static async register({ email, password, fullName, role = 'student' }) {
@@ -23,6 +24,7 @@ class AuthService {
         const tokens = TokenService.generateTokens(user);
 
         await UserModel.updateRefreshToken(user.id, tokens.refreshToken);
+        await LeaderboardModel.addUserToLeaderboard(user.id)
 
         return {
             user: {
@@ -55,7 +57,8 @@ class AuthService {
                 id: user.id,
                 email: user.email,
                 fullName: user.full_name,
-                role: user.role
+                role: user.role,
+                avatarUrl:user.avatar_url
             },
             tokens
         };
@@ -68,17 +71,17 @@ class AuthService {
 
     static async refresh(refreshToken) {
         if (!refreshToken) {
-            throw new ApiError(401, 'Refresh токен отсутствует');
+            throw new ApiError(401, 'Refresh токен отсутствует, пройдите авторизацию');
         }
 
         const userFromDb = await UserModel.findByRefreshToken(refreshToken);
         if (!userFromDb) {
-            throw new ApiError(401, 'Недействительный refresh токен');
+            throw new ApiError(401, 'Недействительный refresh токен, пройдите авторизацию');
         }
 
         const userData = TokenService.verifyRefreshToken(refreshToken);
         if (!userData) {
-            throw new ApiError(401, 'Refresh токен истёк или недействителен');
+            throw new ApiError(401, 'Refresh токен истёк или недействителен, пройдите авторизацию');
         }
 
         const tokens = TokenService.generateTokens(userFromDb);

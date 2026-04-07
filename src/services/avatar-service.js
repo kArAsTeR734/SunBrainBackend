@@ -6,7 +6,8 @@ import { v4 as uuidv4 } from 'uuid';
 class AvatarService {
   static AVATAR_DIR = 'uploads/avatars';
   static ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-  static MAX_SIZE = 5 * 1024 * 1024; // 5MB
+  static MAX_SIZE = 5 * 1024 * 1024;
+  static BASE_URL = 'http://localhost:5000';
 
   static initUploadDir() {
     if (!fs.existsSync(this.AVATAR_DIR)) {
@@ -15,12 +16,10 @@ class AvatarService {
   }
 
   static validateFile(file) {
-    // Проверка типа
     if (!this.ALLOWED_TYPES.includes(file.mimetype)) {
       throw new Error(`Неподдерживаемый тип файла. Допустимые: ${this.ALLOWED_TYPES.join(', ')}`);
     }
 
-    // Проверка размера
     if (file.size > this.MAX_SIZE) {
       throw new Error(`Файл слишком большой. Максимальный размер: ${this.MAX_SIZE / 1024 / 1024}MB`);
     }
@@ -43,8 +42,7 @@ class AvatarService {
 
     await fs.promises.writeFile(filepath, file.buffer);
 
-    // Генерируем URL для доступа
-    const avatarUrl = `/uploads/avatars/${filename}`;
+    const avatarUrl = `${AvatarService.BASE_URL}/uploads/avatars/${filename}`;
 
     return {
       filename,
@@ -74,7 +72,6 @@ class AvatarService {
   }
 
   static async uploadAvatar(userId, file) {
-    // Получаем текущего пользователя
     const user = await UserModel.findById(userId);
 
     if (user?.avatar_url) {
@@ -91,18 +88,6 @@ class AvatarService {
     };
   }
 
-  static async deleteAvatar(userId) {
-    const user = await UserModel.findById(userId);
-
-    if (user?.avatar_url) {
-      await this.deleteOldAvatar(user.avatar_url);
-    }
-
-    const updatedUser = await UserModel.deleteAvatar(userId);
-
-    return updatedUser;
-  }
-
   static async getAvatar(userId) {
     const user = await UserModel.findById(userId);
 
@@ -112,11 +97,6 @@ class AvatarService {
 
     const filename = path.basename(user.avatar_url);
     const filepath = path.join(this.AVATAR_DIR, filename);
-
-    if (!fs.existsSync(filepath)) {
-      await UserModel.deleteAvatar(userId);
-      return null;
-    }
 
     return {
       avatarUrl: user.avatar_url,

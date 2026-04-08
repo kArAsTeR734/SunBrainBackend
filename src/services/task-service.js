@@ -93,14 +93,20 @@ class TaskService {
     for (let i = 1; i <= 25; i++) {
       const tasks = await TaskModel.getByNumber(i, subjectId);
 
-      const easy = tasks.filter(t => t.difficulty === 'easy');
-      const medium = tasks.filter(t => t.difficulty === 'medium');
-      const hard = tasks.filter(t => t.difficulty === 'hard');
+      const easy = tasks.filter(
+        t => String(t.difficulty || '').toLowerCase() === 'easy'
+      );
+      const medium = tasks.filter(
+        t => String(t.difficulty || '').toLowerCase() === 'medium'
+      );
+      const hard = tasks.filter(
+        t => String(t.difficulty || '').toLowerCase() === 'hard'
+      );
 
       result.push(
-        this.getRandom(easy),
-        this.getRandom(medium),
-        this.getRandom(hard)
+        this.getRandom(easy, i, 'easy'),
+        this.getRandom(medium, i, 'medium'),
+        this.getRandom(hard, i, 'hard')
       );
     }
 

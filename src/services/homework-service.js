@@ -1,6 +1,45 @@
 import HomeworkModel from '../models/homework-model.js';
 
 class HomeworkService {
+  static parseTaskContent(content) {
+    if (typeof content !== 'string') {
+      return null;
+    }
+
+    const trimmed = content.trim();
+
+    if (!trimmed.startsWith('{')) {
+      return null;
+    }
+
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (!parsed || typeof parsed !== 'object') {
+        return null;
+      }
+
+      return parsed;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  static mapTaskResponse(task, index) {
+    const taskPayload = this.parseTaskContent(task.content);
+    const questionLatex = taskPayload?.statementLatex || task.content;
+
+    return {
+      id: task.id,
+      number: index + 1,
+      question: questionLatex,
+      questionLatex,
+      solutionLatex: taskPayload?.solutionLatex || task.solution || null,
+      answerLatex: taskPayload?.answerLatex || task.correct_answer || null,
+      imageSvg: taskPayload?.imageSvg || null,
+      difficulty: task.difficulty || null,
+      points: task.points
+    };
+  }
 
   static async getMyHomeworks(userId) {
 
@@ -35,12 +74,7 @@ class HomeworkService {
         code: homework.topic_code
       },
 
-      tasks: tasks.map((task, index) => ({
-        id: task.id,
-        number: index + 1,
-        question: task.content,
-        points: task.points
-      }))
+      tasks: tasks.map((task, index) => this.mapTaskResponse(task, index))
     };
   }
 

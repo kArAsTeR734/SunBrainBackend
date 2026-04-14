@@ -21,12 +21,24 @@ class TestAnswerModel {
     return result.rows[0];
   }
 
-  static async getByTest(testId) {
-    const result = await pool.query(
-      `SELECT * FROM test_answers WHERE test_id = $1`,
-      [testId]
-    );
+  static async getLatestByTestAndTask(testId) {
+    const query = `
+      SELECT DISTINCT ON (task_id)
+        id,
+        test_id,
+        user_id,
+        task_id,
+        task_number,
+        difficulty,
+        user_answer,
+        is_correct,
+        answered_at
+      FROM test_answers
+      WHERE test_id = $1
+      ORDER BY task_id ASC, answered_at DESC, id DESC
+    `;
 
+    const result = await pool.query(query, [testId]);
     return result.rows;
   }
 }

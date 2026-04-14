@@ -3,11 +3,23 @@ import HomeworkAnswerModel from '../models/homework-answer-model.js';
 import pool from '../config/db.js';
 
 class TaskService {
+  static TEST_TASK_NUMBERS = Array.from({ length: 12 }, (_, index) => index + 1);
+
+  static TEST_MIN_TOTAL_TASKS = 20;
+
+  static TEST_MAX_TOTAL_TASKS = 24;
+
+  static TEST_TASKS_PER_NUMBER_MIN = 1;
+
+  static TEST_TASKS_PER_NUMBER_MAX = 2;
+
+  static TEST_DIFFICULTIES = ['easy', 'medium', 'hard'];
+
   static normalizeAnswer(value) {
     return String(value ?? '').trim().toLowerCase();
   }
 
-  static async checkTaskAnswer({userId, taskId, answer}) {
+  static async checkTaskAnswer({ userId, taskId, answer }) {
     if (!userId) {
       throw new Error('User is not authenticated');
     }
@@ -83,40 +95,122 @@ class TaskService {
     }
 
     return {
-      task: task
-    }
+      task
+    };
   }
 
   static async generateTestTasks(subjectId) {
     const result = [];
+    const numbersMeta = [];
 
-    for (let i = 1; i <= 25; i++) {
-      const tasks = await TaskModel.getByNumber(i, subjectId);
+    for (const taskNumber of this.TEST_TASK_NUMBERS) {
+      const tasks = await TaskModel.getByNumber(taskNumber, subjectId);
+      const groupedTasks = this.groupByDifficulty(tasks);
+      const availableDifficulties = Object.keys(groupedTasks);
 
-      const easy = tasks.filter(
-        t => String(t.difficulty || '').toLowerCase() === 'easy'
-      );
-      const medium = tasks.filter(
-        t => String(t.difficulty || '').toLowerCase() === 'medium'
-      );
-      const hard = tasks.filter(
-        t => String(t.difficulty || '').toLowerCase() === 'hard'
+      if (availableDifficulties.length === 0) {
+        throw new Error(`No tasks found for task number ${taskNumber}`);
+      }
+
+      numbersMeta.push({
+        taskNumber,
+        groupedTasks,
+        availableDifficulties,
+        canPickTwo: availableDifficulties.length >= 2
+      });
+    }
+
+    const plannedCounts = this.planTasksCountByNumber(numbersMeta);
+
+    for (const meta of numbersMeta) {
+      const tasksCount = plannedCounts[meta.taskNumber] || 1;
+      const selectedDifficulties = this.pickUniqueDifficulties(
+        meta.availableDifficulties,
+        tasksCount
       );
 
-      result.push(
-        this.getRandom(easy, i, 'easy'),
-        this.getRandom(medium, i, 'medium'),
-        this.getRandom(hard, i, 'hard')
-      );
+      for (const difficulty of selectedDifficulties) {
+        result.push(this.getRandom(meta.groupedTasks[difficulty], meta.taskNumber, difficulty));
+      }
     }
 
     return result;
   }
 
-  static getRandom(arr, number, difficulty) {
-    if (!arr.length) {
-      throw new Error(`Нет задач для ${number} ${difficulty}`);
+  static planTasksCountByNumber(numbersMeta) {
+    const counts = {};
+
+    for (const meta of numbersMeta) {
+      counts[meta.taskNumber] = this.TEST_TASKS_PER_NUMBER_MIN;
     }
+
+    const totalNumbers = numbersMeta.length;
+    const minPossible = totalNumbers * this.TEST_TASKS_PER_NUMBER_MIN;
+    const twoTaskCandidates = numbersMeta.filter(meta => meta.canPickTwo);
+    const maxPossible = minPossible + twoTaskCandidates.length;
+
+    const minTarget = Math.max(this.TEST_MIN_TOTAL_TASKS, minPossible);
+    const maxTarget = Math.min(this.TEST_MAX_TOTAL_TASKS, maxPossible);
+
+    if (minTarget > maxTarget) {
+      throw new Error(
+        `Cannot build test with requested size: available range is ${minPossible}-${maxPossible}`
+      );
+    }
+
+    const targetTotal = this.randomInt(minTarget, maxTarget);
+    const extraTasksNeeded = targetTotal - minPossible;
+
+    const selectedForTwo = this.pickRandomItems(twoTaskCandidates, extraTasksNeeded);
+
+    for (const meta of selectedForTwo) {
+      counts[meta.taskNumber] = 2;
+    }
+
+    return counts;
+  }
+
+  static groupByDifficulty(tasks) {
+    const grouped = {};
+
+    for (const difficulty of this.TEST_DIFFICULTIES) {
+      const items = tasks.filter(
+        task => String(task.difficulty || '').toLowerCase() === difficulty
+      );
+
+      if (items.length > 0) {
+        grouped[difficulty] = items;
+      }
+    }
+
+    return grouped;
+  }
+
+  static pickUniqueDifficulties(availableDifficulties, count) {
+    const shuffled = [...availableDifficulties].sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, count);
+  }
+
+  static pickRandomItems(items, count) {
+    if (count <= 0) {
+      return [];
+    }
+
+    const shuffled = [...items].sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, count);
+  }
+
+  static randomInt(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  }
+
+  static getRandom(arr, taskNumber, difficulty) {
+    if (!arr.length) {
+      throw new Error(
+        `No tasks for task number ${taskNumber} and difficulty ${difficulty}`
+      );
+    }
+
     return arr[Math.floor(Math.random() * arr.length)];
   }
 }

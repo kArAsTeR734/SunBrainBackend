@@ -23,7 +23,6 @@ class AuthService {
 
         const tokens = TokenService.generateTokens(user);
 
-        await UserModel.updateRefreshToken(user.id, tokens.refreshToken);
         await LeaderboardModel.addUserToLeaderboard(user.id)
 
         return {
@@ -49,8 +48,6 @@ class AuthService {
         }
 
         const tokens = TokenService.generateTokens(user);
-
-        await UserModel.updateRefreshToken(user.id, tokens.refreshToken);
 
         return {
             user: {

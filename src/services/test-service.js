@@ -78,32 +78,44 @@ class TestService {
       throw new Error('Test not found');
     }
 
-    const answers = await TestAnswerModel.getByTest(normalizedTestId);
-    const taskNumbers = await TestModel.getTaskNumbersByTest(normalizedTestId);
+    const taskPlan = await TestModel.getTaskPlanByTest(normalizedTestId);
+    const latestAnswers = await TestAnswerModel.getLatestByTestAndTask(
+      normalizedTestId
+    );
 
-    const masteryMap = {};
-
-    for (const ans of answers) {
-      if (!masteryMap[ans.task_number]) {
-        masteryMap[ans.task_number] = [];
+    const expectedTasksByNumber = {};
+    for (const item of taskPlan) {
+      if (!expectedTasksByNumber[item.taskNumber]) {
+        expectedTasksByNumber[item.taskNumber] = [];
       }
-      masteryMap[ans.task_number].push(ans);
+      expectedTasksByNumber[item.taskNumber].push(item.taskId);
+    }
+
+    const latestAnswerByTaskId = {};
+    for (const answer of latestAnswers) {
+      latestAnswerByTaskId[Number(answer.task_id)] = answer;
     }
 
     const result = {};
 
-    for (const taskNumber of taskNumbers) {
-      const attempts = masteryMap[taskNumber] || [];
+    for (const [taskNumber, expectedTaskIds] of Object.entries(
+      expectedTasksByNumber
+    )) {
+      const hasAllAnswers = expectedTaskIds.every(
+        taskId => latestAnswerByTaskId[taskId]
+      );
 
       const allCorrect =
-        attempts.length === 3 &&
-        attempts.every(a => a.is_correct);
+        hasAllAnswers &&
+        expectedTaskIds.every(taskId => latestAnswerByTaskId[taskId].is_correct);
 
       result[taskNumber] = allCorrect;
     }
 
-    const totalQuestions = Object.keys(result).length;
-    const correctAnswers = Object.values(result).filter(Boolean).length;
+    const totalQuestions = taskPlan.length;
+    const correctAnswers = taskPlan.filter(
+      item => latestAnswerByTaskId[item.taskId]?.is_correct
+    ).length;
     const failedTaskNumbers = Object.entries(result)
       .filter(([, isMastered]) => !isMastered)
       .map(([taskNumber]) => Number(taskNumber));
@@ -128,6 +140,8 @@ class TestService {
     }
 
     return {
+      totalTasks: totalQuestions,
+      correctTasks: correctAnswers,
       masteryByTaskNumber: result,
       failedTaskNumbers,
       generatedHomeworks,

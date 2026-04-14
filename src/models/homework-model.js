@@ -59,7 +59,7 @@ export default class HomeworkModel {
         t.solution,
         t.correct_answer,
         t.difficulty,
-        COALESCE(ht.points, t.points) AS points
+        t.points AS points
     FROM homework_tasks ht
     LEFT JOIN tasks t ON t.id = ht.task_id
     WHERE ht.homework_id = $1
@@ -233,10 +233,10 @@ export default class HomeworkModel {
 
         await pool.query(
           `
-          INSERT INTO homework_tasks (homework_id, task_id, order_index, points)
-          VALUES ($1,$2,$3,$4)
+          INSERT INTO homework_tasks (homework_id, task_id, order_index)
+          VALUES ($1,$2,$3)
           `,
-          [homework.id, createdTask.id, index, points]
+          [homework.id, createdTask.id, index]
         );
       }
 

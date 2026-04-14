@@ -60,16 +60,19 @@ class TestModel {
     return rows[0] || null;
   }
 
-  static async getTaskNumbersByTest(testId) {
+  static async getTaskPlanByTest(testId) {
     const query = `
-      SELECT DISTINCT task_number
+      SELECT task_id, task_number
       FROM test_tasks
       WHERE test_id = $1
-      ORDER BY task_number ASC
+      ORDER BY task_number ASC, order_index ASC
     `;
 
     const { rows } = await pool.query(query, [testId]);
-    return rows.map(row => Number(row.task_number));
+    return rows.map(row => ({
+      taskId: Number(row.task_id),
+      taskNumber: Number(row.task_number)
+    }));
   }
 
   static async finish(testId, stats = {}) {

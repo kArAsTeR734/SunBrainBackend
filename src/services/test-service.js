@@ -4,15 +4,45 @@ import TestAnswerModel from '../models/test-answer-model.js';
 import AIHomeworkService from './ai-homework-service.js';
 
 class TestService {
-  static async startTest(userId, subjectId) {
-    const normalizedSubjectId = Number(subjectId);
+  static async getPoolMeta(subjectCode) {
+    return TaskService.getTestPoolMeta(subjectCode);
+  }
+
+  static async getTestCounts(testId, userId) {
+    const normalizedTestId = Number(testId);
 
     if (!userId) {
       throw new Error('User is not authenticated');
     }
 
-    if (!Number.isInteger(normalizedSubjectId) || normalizedSubjectId <= 0) {
-      throw new Error('subjectId must be a positive integer');
+    const test = await TestModel.getByIdForUser(normalizedTestId, userId);
+    if (!test) {
+      throw new Error('Test not found');
+    }
+
+    const countsByNumber = await TestModel.getTaskCountsByTest(normalizedTestId);
+    const totalTasks = countsByNumber.reduce((sum, item) => sum + item.count, 0);
+
+    return {
+      testId: normalizedTestId,
+      subjectId: test.subject_id,
+      totalTasks,
+      countsByNumber
+    };
+  }
+
+  static async startTest(userId, subjectCode) {
+    if (!userId) {
+      throw new Error('User is not authenticated');
+    }
+
+    const meta = await TaskService.getTestPoolMeta(subjectCode);
+    const normalizedSubjectId = Number(meta.subjectId);
+
+    if (!meta.canBuildTarget) {
+      throw new Error(
+        `Cannot build test with target ${meta.targetTotalTasks}: available range is ${meta.minPossibleTotalTasks}-${meta.maxPossibleTotalTasks}`
+      );
     }
 
     const test = await TestModel.create(userId, normalizedSubjectId);
@@ -21,9 +51,19 @@ class TestService {
 
     await TestModel.addTasks(test.id, tasks);
 
+    const countsByNumber = await TestModel.getTaskCountsByTest(test.id);
+    const publicTasks = tasks.map((task, index) =>
+      TaskService.buildPublicTestTask(task, index)
+    );
+
     return {
       testId: test.id,
-      tasks
+      subjectId: normalizedSubjectId,
+      subjectCode: meta.subjectCode,
+      targetTotalTasks: TaskService.TEST_TARGET_TOTAL_TASKS,
+      totalTasks: publicTasks.length,
+      countsByNumber,
+      tasks: publicTasks
     };
   }
 

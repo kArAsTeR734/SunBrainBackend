@@ -5,9 +5,9 @@ import pool from '../config/db.js';
 class TaskService {
   static TEST_TASK_NUMBERS = Array.from({ length: 12 }, (_, index) => index + 1);
 
-  static TEST_MIN_TOTAL_TASKS = 20;
+  static TEST_SUBJECT_CODES = ['emath', 'omath', 'ephysic', 'ophysic'];
 
-  static TEST_MAX_TOTAL_TASKS = 24;
+  static TEST_TARGET_TOTAL_TASKS = 20;
 
   static TEST_TASKS_PER_NUMBER_MIN = 1;
 
@@ -28,7 +28,7 @@ class TaskService {
       throw new Error('Answer is required');
     }
 
-    const task = await TaskModel.getTaskById(taskId);
+    const task = await TaskModel.getTaskByIdForCheck(taskId);
 
     if (!task) {
       throw new Error('Task not found');
@@ -137,6 +137,110 @@ class TaskService {
     return result;
   }
 
+  static async getTestPoolMeta(subjectCode) {
+    const normalizedSubjectCode = String(subjectCode || '')
+      .trim()
+      .toLowerCase();
+
+    if (!normalizedSubjectCode) {
+      throw new Error('subjectCode is required');
+    }
+
+    if (!this.TEST_SUBJECT_CODES.includes(normalizedSubjectCode)) {
+      throw new Error('subjectCode is not supported');
+    }
+
+    const subject = await TaskModel.getSubjectByCode(normalizedSubjectCode);
+    if (!subject) {
+      throw new Error('Subject not found');
+    }
+
+    const rows = await TaskModel.getCountsByNumberAndDifficulty(
+      normalizedSubjectCode,
+      this.TEST_TASK_NUMBERS
+    );
+
+    const byNumber = {};
+
+    for (const taskNumber of this.TEST_TASK_NUMBERS) {
+      byNumber[taskNumber] = {
+        taskNumber,
+        availableTotal: 0,
+        availableByDifficulty: {
+          easy: 0,
+          medium: 0,
+          hard: 0
+        },
+        maxSelectableForTest: 0
+      };
+    }
+
+    for (const row of rows) {
+      const taskNumber = Number(row.task_number);
+      const difficulty = String(row.difficulty || '').toLowerCase();
+      const count = Number(row.count) || 0;
+
+      if (!byNumber[taskNumber]) {
+        continue;
+      }
+
+      if (!this.TEST_DIFFICULTIES.includes(difficulty)) {
+        continue;
+      }
+
+      byNumber[taskNumber].availableByDifficulty[difficulty] = count;
+      byNumber[taskNumber].availableTotal += count;
+    }
+
+    const numbers = this.TEST_TASK_NUMBERS.map(taskNumber => {
+      const item = byNumber[taskNumber];
+      const availableDifficultiesCount = Object.values(
+        item.availableByDifficulty
+      ).filter(count => count > 0).length;
+
+      return {
+        ...item,
+        maxSelectableForTest: Math.min(
+          this.TEST_TASKS_PER_NUMBER_MAX,
+          availableDifficultiesCount
+        )
+      };
+    });
+
+    const missingNumbers = numbers
+      .filter(item => item.maxSelectableForTest === 0)
+      .map(item => item.taskNumber);
+
+    const hasMissingNumbers = missingNumbers.length > 0;
+    const minPossibleTotalTasks = hasMissingNumbers
+      ? 0
+      : numbers.length * this.TEST_TASKS_PER_NUMBER_MIN;
+    const maxPossibleTotalTasks = hasMissingNumbers
+      ? 0
+      : numbers.reduce(
+          (sum, item) => sum + Math.max(item.maxSelectableForTest, 0),
+          0
+        );
+
+    const canBuildTarget =
+      !hasMissingNumbers &&
+      this.TEST_TARGET_TOTAL_TASKS >= minPossibleTotalTasks &&
+      this.TEST_TARGET_TOTAL_TASKS <= maxPossibleTotalTasks;
+
+    return {
+      subjectId: subject.id,
+      subjectCode: subject.code,
+      subjectName: subject.name,
+      testTaskNumbers: this.TEST_TASK_NUMBERS,
+      targetTotalTasks: this.TEST_TARGET_TOTAL_TASKS,
+      minPossibleTotalTasks,
+      maxPossibleTotalTasks,
+      canBuildTarget,
+      missingTaskNumbers: missingNumbers,
+      numbers
+    };
+  }
+
   static planTasksCountByNumber(numbersMeta) {
     const counts = {};
 
@@ -148,17 +252,15 @@ class TaskService {
     const minPossible = totalNumbers * this.TEST_TASKS_PER_NUMBER_MIN;
     const twoTaskCandidates = numbersMeta.filter(meta => meta.canPickTwo);
     const maxPossible = minPossible + twoTaskCandidates.length;
+    const targetTotal = this.TEST_TARGET_TOTAL_TASKS;
+    const targetOutOfRange = targetTotal < minPossible || targetTotal > maxPossible;
 
-    const minTarget = Math.max(this.TEST_MIN_TOTAL_TASKS, minPossible);
-    const maxTarget = Math.min(this.TEST_MAX_TOTAL_TASKS, maxPossible);
-
-    if (minTarget > maxTarget) {
+    if (targetOutOfRange) {
       throw new Error(
-        `Cannot build test with requested size: available range is ${minPossible}-${maxPossible}`
+        `Cannot build test with target ${targetTotal}: available range is ${minPossible}-${maxPossible}`
       );
     }
 
-    const targetTotal = this.randomInt(minTarget, maxTarget);
     const extraTasksNeeded = targetTotal - minPossible;
 
     const selectedForTwo = this.pickRandomItems(twoTaskCandidates, extraTasksNeeded);
@@ -200,8 +302,16 @@ class TaskService {
     return shuffled.slice(0, count);
   }
 
-  static randomInt(min, max) {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
+  static buildPublicTestTask(task, orderIndex) {
+    return {
+      id: Number(task.id),
+      taskNumber: Number(task.task_number),
+      orderIndex: Number(orderIndex),
+      difficulty: String(task.difficulty || '').toLowerCase(),
+      content: task.content,
+      originalTex: task.original_tex || null,
+      answerFormat: task.answer_format || null
+    };
   }
 
   static getRandom(arr, taskNumber, difficulty) {

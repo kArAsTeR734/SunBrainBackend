@@ -75,6 +75,22 @@ class TestModel {
     }));
   }
 
+  static async getTaskCountsByTest(testId) {
+    const query = `
+      SELECT task_number, COUNT(*)::int AS count
+      FROM test_tasks
+      WHERE test_id = $1
+      GROUP BY task_number
+      ORDER BY task_number ASC
+    `;
+
+    const { rows } = await pool.query(query, [testId]);
+    return rows.map(row => ({
+      taskNumber: Number(row.task_number),
+      count: Number(row.count)
+    }));
+  }
+
   static async finish(testId, stats = {}) {
     await pool.query(
       `UPDATE tests 

@@ -56,7 +56,7 @@ app.use('/api/leaderboard',leaderboardRoutes)
 app.use('/api/tasks', taskRouter);
 app.use('/api/homework', homeworkRoutes)
 app.use('/api/topics', topicRouter)
-app.use('/api/tests', testRouter)
+app.use('/api/test', testRouter)
 app.use('/api/ai', aiRouter);
 
 app.use((error, req, res, next) => {

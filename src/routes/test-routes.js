@@ -4,6 +4,14 @@ import { authMiddleware } from '../middleware/auth-middleware.js';
 
 const testRouter = new Router();
 
+testRouter.get(
+  '/subjects/:subjectCode/pool-meta',
+  authMiddleware,
+  TestController.getPoolMeta
+);
+
+testRouter.get('/:testId/counts', authMiddleware, TestController.getTestCounts);
+
 testRouter.post('/start', authMiddleware, TestController.startTest);
 
 testRouter.post('/:testId/answer', authMiddleware, TestController.submitAnswer);

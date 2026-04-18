@@ -67,6 +67,45 @@ class TestService {
     };
   }
 
+  static async getReview(testId, userId) {
+    const normalizedTestId = Number(testId);
+
+    if (!userId) {
+      throw new Error('User is not authenticated');
+    }
+
+    const test = await TestModel.getByIdForUser(normalizedTestId, userId);
+    if (!test) {
+      throw new Error('Test not found');
+    }
+
+    if (String(test.status || '').toLowerCase() !== 'completed') {
+      throw new Error('Test is not completed yet');
+    }
+
+    const reviewRows = await TestModel.getReviewByTest(normalizedTestId);
+    const answers = reviewRows.map(row => ({
+      taskId: Number(row.task_id),
+      taskNumber: Number(row.task_number),
+      orderIndex: Number(row.order_index),
+      difficulty: String(row.difficulty || '').toLowerCase(),
+      content: row.content,
+      originalTex: row.original_tex || null,
+      answerFormat: row.answer_format || null,
+      userAnswer: row.user_answer ?? null,
+      correctAnswer: row.correct_answer,
+      isCorrect: Boolean(row.is_correct)
+    }));
+
+    return {
+      testId: normalizedTestId,
+      subjectId: Number(test.subject_id),
+      totalTasks: answers.length,
+      correctTasks: answers.filter(item => item.isCorrect).length,
+      answers
+    };
+  }
+
   static async submitAnswer({ userId, testId, taskId, answer }) {
     const normalizedTestId = Number(testId);
     const normalizedTaskId = Number(taskId);

@@ -34,6 +34,25 @@ class TestController {
     }
   }
 
+  static async getReview(req, res) {
+    try {
+      const userId = req.userId;
+      const { testId } = req.params;
+      const data = await TestService.getReview(testId, userId);
+
+      return res.status(200).json(successResponse(data));
+    } catch (error) {
+      const status =
+        error.message === 'Test not found'
+          ? 404
+          : error.message === 'Test is not completed yet'
+            ? 409
+            : 500;
+
+      return res.status(status).json(errorResponse(error.message));
+    }
+  }
+
   static async startTest(req, res) {
     try {
       const userId = req.userId;

@@ -7,6 +7,8 @@ class TestModel {
         t.id,
         t.user_id,
         t.subject_id,
+        t.status,
+        t.completed_at,
         s.name AS subject_name,
         s.code AS subject_code
       FROM tests t
@@ -89,6 +91,39 @@ class TestModel {
       taskNumber: Number(row.task_number),
       count: Number(row.count)
     }));
+  }
+
+  static async getReviewByTest(testId) {
+    const query = `
+      SELECT
+        tt.task_id,
+        tt.task_number,
+        tt.difficulty,
+        tt.order_index,
+        t.content,
+        t.original_tex,
+        t.answer_format,
+        t.correct_answer,
+        latest.user_answer,
+        COALESCE(latest.is_correct, false) AS is_correct
+      FROM test_tasks tt
+      JOIN tasks t ON t.id = tt.task_id
+      LEFT JOIN LATERAL (
+        SELECT
+          ta.user_answer,
+          ta.is_correct
+        FROM test_answers ta
+        WHERE ta.test_id = $1
+          AND ta.task_id = tt.task_id
+        ORDER BY ta.answered_at DESC, ta.id DESC
+        LIMIT 1
+      ) latest ON true
+      WHERE tt.test_id = $1
+      ORDER BY tt.order_index ASC
+    `;
+
+    const { rows } = await pool.query(query, [testId]);
+    return rows;
   }
 
   static async finish(testId, stats = {}) {

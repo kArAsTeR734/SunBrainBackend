@@ -11,6 +11,7 @@ testRouter.get(
 );
 
 testRouter.get('/:testId/counts', authMiddleware, TestController.getTestCounts);
+testRouter.get('/:testId/review', authMiddleware, TestController.getReview);
 
 testRouter.post('/start', authMiddleware, TestController.startTest);
 

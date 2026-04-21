@@ -17,6 +17,12 @@ testRouter.post('/start', authMiddleware, TestController.startTest);
 
 testRouter.post('/:testId/answer', authMiddleware, TestController.submitAnswer);
 
+testRouter.post(
+  '/:testId/generate-homeworks',
+  authMiddleware,
+  TestController.generateHomeworks
+);
+
 testRouter.post('/:testId/finish', authMiddleware, TestController.finishTest);
 
 export default testRouter;

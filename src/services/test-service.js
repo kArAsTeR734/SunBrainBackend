@@ -106,6 +106,114 @@ class TestService {
     };
   }
 
+  static buildOutcome(taskPlan, latestAnswers) {
+    const expectedTasksByNumber = {};
+    for (const item of taskPlan) {
+      if (!expectedTasksByNumber[item.taskNumber]) {
+        expectedTasksByNumber[item.taskNumber] = [];
+      }
+      expectedTasksByNumber[item.taskNumber].push(item.taskId);
+    }
+
+    const latestAnswerByTaskId = {};
+    for (const answer of latestAnswers) {
+      latestAnswerByTaskId[Number(answer.task_id)] = answer;
+    }
+
+    const masteryByTaskNumber = {};
+
+    for (const [taskNumber, expectedTaskIds] of Object.entries(
+      expectedTasksByNumber
+    )) {
+      const hasAllAnswers = expectedTaskIds.every(
+        taskId => latestAnswerByTaskId[taskId]
+      );
+
+      const allCorrect =
+        hasAllAnswers &&
+        expectedTaskIds.every(taskId => latestAnswerByTaskId[taskId].is_correct);
+
+      masteryByTaskNumber[taskNumber] = allCorrect;
+    }
+
+    const totalTasks = taskPlan.length;
+    const correctTasks = taskPlan.filter(
+      item => latestAnswerByTaskId[item.taskId]?.is_correct
+    ).length;
+    const failedTaskNumbers = Object.entries(masteryByTaskNumber)
+      .filter(([, isMastered]) => !isMastered)
+      .map(([taskNumber]) => Number(taskNumber));
+
+    return {
+      masteryByTaskNumber,
+      failedTaskNumbers,
+      totalTasks,
+      correctTasks
+    };
+  }
+
+  static async generateHomeworks(testId, userId, requestedTaskNumbers) {
+    const normalizedTestId = Number(testId);
+
+    if (!userId) {
+      throw new Error('User is not authenticated');
+    }
+
+    const test = await TestModel.getByIdForUser(normalizedTestId, userId);
+    if (!test) {
+      throw new Error('Test not found');
+    }
+
+    if (String(test.status || '').toLowerCase() !== 'completed') {
+      throw new Error('Test is not completed yet');
+    }
+
+    const taskPlan = await TestModel.getTaskPlanByTest(normalizedTestId);
+    const latestAnswers = await TestAnswerModel.getLatestByTestAndTask(
+      normalizedTestId
+    );
+    const outcome = this.buildOutcome(taskPlan, latestAnswers);
+
+    const normalizedRequested = [
+      ...new Set(
+        (Array.isArray(requestedTaskNumbers) ? requestedTaskNumbers : [])
+          .map(Number)
+          .filter(number => Number.isInteger(number) && number > 0)
+      )
+    ];
+
+    const targetTaskNumbers =
+      normalizedRequested.length > 0
+        ? normalizedRequested.filter(taskNumber =>
+            outcome.failedTaskNumbers.includes(taskNumber)
+          )
+        : outcome.failedTaskNumbers;
+
+    if (targetTaskNumbers.length === 0) {
+      return {
+        testId: normalizedTestId,
+        subjectId: Number(test.subject_id),
+        generatedFromTaskNumbers: [],
+        generatedHomeworks: [],
+        generationErrors: []
+      };
+    }
+
+    const generationResult = await AIHomeworkService.createForTaskNumbers({
+      userId,
+      subjectId: test.subject_id,
+      taskNumbers: targetTaskNumbers
+    });
+
+    return {
+      testId: normalizedTestId,
+      subjectId: Number(test.subject_id),
+      generatedFromTaskNumbers: targetTaskNumbers,
+      generatedHomeworks: generationResult.created,
+      generationErrors: generationResult.failed
+    };
+  }
+
   static async submitAnswer({ userId, testId, taskId, answer }) {
     const normalizedTestId = Number(testId);
     const normalizedTaskId = Number(taskId);
@@ -161,70 +269,19 @@ class TestService {
     const latestAnswers = await TestAnswerModel.getLatestByTestAndTask(
       normalizedTestId
     );
-
-    const expectedTasksByNumber = {};
-    for (const item of taskPlan) {
-      if (!expectedTasksByNumber[item.taskNumber]) {
-        expectedTasksByNumber[item.taskNumber] = [];
-      }
-      expectedTasksByNumber[item.taskNumber].push(item.taskId);
-    }
-
-    const latestAnswerByTaskId = {};
-    for (const answer of latestAnswers) {
-      latestAnswerByTaskId[Number(answer.task_id)] = answer;
-    }
-
-    const result = {};
-
-    for (const [taskNumber, expectedTaskIds] of Object.entries(
-      expectedTasksByNumber
-    )) {
-      const hasAllAnswers = expectedTaskIds.every(
-        taskId => latestAnswerByTaskId[taskId]
-      );
-
-      const allCorrect =
-        hasAllAnswers &&
-        expectedTaskIds.every(taskId => latestAnswerByTaskId[taskId].is_correct);
-
-      result[taskNumber] = allCorrect;
-    }
-
-    const totalQuestions = taskPlan.length;
-    const correctAnswers = taskPlan.filter(
-      item => latestAnswerByTaskId[item.taskId]?.is_correct
-    ).length;
-    const failedTaskNumbers = Object.entries(result)
-      .filter(([, isMastered]) => !isMastered)
-      .map(([taskNumber]) => Number(taskNumber));
+    const outcome = this.buildOutcome(taskPlan, latestAnswers);
 
     await TestModel.finish(normalizedTestId, {
-      totalQuestions,
-      correctAnswers
+      totalQuestions: outcome.totalTasks,
+      correctAnswers: outcome.correctTasks
     });
 
-    let generatedHomeworks = [];
-    let generationErrors = [];
-
-    if (failedTaskNumbers.length > 0) {
-      const generationResult = await AIHomeworkService.createForTaskNumbers({
-        userId,
-        subjectId: test.subject_id,
-        taskNumbers: failedTaskNumbers
-      });
-
-      generatedHomeworks = generationResult.created;
-      generationErrors = generationResult.failed;
-    }
-
     return {
-      totalTasks: totalQuestions,
-      correctTasks: correctAnswers,
-      masteryByTaskNumber: result,
-      failedTaskNumbers,
-      generatedHomeworks,
-      generationErrors
+      totalTasks: outcome.totalTasks,
+      correctTasks: outcome.correctTasks,
+      masteryByTaskNumber: outcome.masteryByTaskNumber,
+      failedTaskNumbers: outcome.failedTaskNumbers,
+      hasFailedTaskNumbers: outcome.failedTaskNumbers.length > 0
     };
   }
 }

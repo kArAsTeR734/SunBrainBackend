@@ -53,6 +53,31 @@ class TestController {
     }
   }
 
+  static async generateHomeworks(req, res) {
+    try {
+      const userId = req.userId;
+      const { testId } = req.params;
+      const { taskNumbers } = req.body || {};
+
+      const data = await TestService.generateHomeworks(
+        testId,
+        userId,
+        taskNumbers
+      );
+
+      return res.status(200).json(successResponse(data));
+    } catch (error) {
+      const status =
+        error.message === 'Test not found'
+          ? 404
+          : error.message === 'Test is not completed yet'
+            ? 409
+            : 500;
+
+      return res.status(status).json(errorResponse(error.message));
+    }
+  }
+
   static async startTest(req, res) {
     try {
       const userId = req.userId;

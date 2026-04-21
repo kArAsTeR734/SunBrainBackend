@@ -225,7 +225,7 @@ export default class HomeworkModel {
             topicId,
             task.difficulty,
             'ai_generated',
-            'latex'
+            'text'
           ]
         );
 

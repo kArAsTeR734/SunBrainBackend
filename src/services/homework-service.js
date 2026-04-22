@@ -1,41 +1,28 @@
 import HomeworkModel from '../models/homework-model.js';
+import {
+  normalizeLatexText,
+  normalizeTaskContent,
+  normalizeSvg
+} from '../utils/task-content-utils.js';
 
 class HomeworkService {
-  static parseTaskContent(content) {
-    if (typeof content !== 'string') {
-      return null;
-    }
-
-    const trimmed = content.trim();
-
-    if (!trimmed.startsWith('{')) {
-      return null;
-    }
-
-    try {
-      const parsed = JSON.parse(trimmed);
-      if (!parsed || typeof parsed !== 'object') {
-        return null;
-      }
-
-      return parsed;
-    } catch (error) {
-      return null;
-    }
-  }
-
   static mapTaskResponse(task, index) {
-    const taskPayload = this.parseTaskContent(task.content);
-    const questionLatex = taskPayload?.statementLatex || task.content;
+    const normalizedTask = normalizeTaskContent(task.content, task.original_tex);
+    const taskPayload = normalizedTask.payload;
+    const questionLatex = normalizedTask.originalTex || normalizedTask.content;
 
     return {
       id: task.id,
       number: index + 1,
-      question: questionLatex,
+      question: normalizedTask.content,
       questionLatex,
-      solutionLatex: taskPayload?.solutionLatex || task.solution || null,
-      answerLatex: taskPayload?.answerLatex || task.correct_answer || null,
-      imageSvg: taskPayload?.imageSvg || null,
+      solutionLatex:
+        normalizeLatexText(taskPayload?.solutionLatex || task.solution || '') ||
+        null,
+      answerLatex:
+        normalizeLatexText(taskPayload?.answerLatex || task.correct_answer || '') ||
+        null,
+      imageSvg: normalizeSvg(taskPayload?.imageSvg) || null,
       difficulty: task.difficulty || null,
       points: task.points
     };

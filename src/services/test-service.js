@@ -84,18 +84,23 @@ class TestService {
     }
 
     const reviewRows = await TestModel.getReviewByTest(normalizedTestId);
-    const answers = reviewRows.map(row => ({
-      taskId: Number(row.task_id),
-      taskNumber: Number(row.task_number),
-      orderIndex: Number(row.order_index),
-      difficulty: String(row.difficulty || '').toLowerCase(),
-      content: row.content,
-      originalTex: row.original_tex || null,
-      answerFormat: row.answer_format || null,
-      userAnswer: row.user_answer ?? null,
-      correctAnswer: row.correct_answer,
-      isCorrect: Boolean(row.is_correct)
-    }));
+    const answers = reviewRows.map(row => {
+      const normalizedTask = TaskService.normalizeTaskPresentation(row);
+
+      return {
+        taskId: Number(row.task_id),
+        taskNumber: Number(row.task_number),
+        orderIndex: Number(row.order_index),
+        difficulty: String(row.difficulty || '').toLowerCase(),
+        content: normalizedTask.content,
+        originalTex: normalizedTask.originalTex,
+        answerFormat: row.answer_format || null,
+        imageSvg: normalizedTask.payload?.imageSvg || null,
+        userAnswer: row.user_answer ?? null,
+        correctAnswer: row.correct_answer,
+        isCorrect: Boolean(row.is_correct)
+      };
+    });
 
     return {
       testId: normalizedTestId,

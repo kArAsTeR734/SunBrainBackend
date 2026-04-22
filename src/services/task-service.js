@@ -1,6 +1,7 @@
 import TaskModel from '../models/task-model.js';
 import HomeworkAnswerModel from '../models/homework-answer-model.js';
 import pool from '../config/db.js';
+import { normalizeTaskContent } from '../utils/task-content-utils.js';
 
 class TaskService {
   static TEST_TASK_NUMBERS = Array.from({ length: 12 }, (_, index) => index + 1);
@@ -303,15 +304,22 @@ class TaskService {
   }
 
   static buildPublicTestTask(task, orderIndex) {
+    const normalizedTask = this.normalizeTaskPresentation(task);
+
     return {
       id: Number(task.id),
       taskNumber: Number(task.task_number),
       orderIndex: Number(orderIndex),
       difficulty: String(task.difficulty || '').toLowerCase(),
-      content: task.content,
-      originalTex: task.original_tex || null,
-      answerFormat: task.answer_format || null
+      content: normalizedTask.content,
+      originalTex: normalizedTask.originalTex,
+      answerFormat: task.answer_format || null,
+      imageSvg: normalizedTask.payload?.imageSvg || null
     };
+  }
+
+  static normalizeTaskPresentation(task) {
+    return normalizeTaskContent(task?.content, task?.original_tex || null);
   }
 
   static getRandom(arr, taskNumber, difficulty) {

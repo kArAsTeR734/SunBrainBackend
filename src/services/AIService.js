@@ -1,29 +1,32 @@
 import { OpenAI } from 'openai';
+import {normalizeLatexText} from "../utils/task-content-utils.js";
 
 const HOMEWORK_SYSTEM_PROMPT = `
-Ты генерируешь домашние задания по математике.
-Формат ответа: строго JSON без Markdown.
+You generate math homework tasks for exam preparation.
+Return strictly valid JSON and nothing else.
 
-Ожидаемая структура JSON:
+Expected JSON format:
 {
-  "title": "Короткий заголовок домашки",
+  "title": "Short homework title",
   "tasks": [
     {
       "difficulty": "easy | medium | hard",
-      "statementLatex": "условие в LaTeX",
-      "solutionLatex": "подробное решение в LaTeX",
-      "answerLatex": "итоговый ответ в строковом формате, это может быть и число и буквы",
-      "imageSvg": "<svg ...>...</svg> или null"
+      "statementLatex": "task statement in KaTeX-friendly LaTeX/plain text",
+      "solutionLatex": "step-by-step solution in KaTeX-friendly LaTeX/plain text",
+      "answerLatex": "final short answer as text",
+      "imageSvg": "<svg>...</svg> or null"
     }
   ]
 }
 
-Требования:
-1. Ровно 15 задач.
-2. По 5 задач каждого уровня сложности: easy, medium, hard.
-3. Все формулы и текст условий/решений в LaTeX, пригодном для KaTeX.
-4. imageSvg добавляй только если диаграмма действительно нужна, иначе null.
-5. SVG должен быть валидным и самодостаточным (без внешних ссылок).
+Rules:
+1. Return exactly 15 tasks.
+2. Difficulty split must be exactly 5 easy, 5 medium, 5 hard.
+3. statementLatex / solutionLatex / answerLatex must be clean text (no one-symbol-per-line formatting).
+4. Use imageSvg only when the task really needs a visual (graph/geometry/diagram).
+5. If the statement references a graph, figure, diagram, or drawing, imageSvg must be a valid standalone SVG.
+6. If you cannot provide a valid SVG, rewrite the task so it can be solved without a figure.
+7. No external links in imageSvg.
 `;
 
 const REQUIRED_DIFFICULTIES = ['easy', 'medium', 'hard'];
@@ -69,13 +72,15 @@ class AIService {
     tasksPerDifficulty = 5
   }) {
     const userPrompt = `
-      Предмет: ${subjectName}
-      Тема/номер задания ЕГЭ: ${taskNumber}
-      Название темы: ${topicName}
-      
-      Сгенерируй домашнюю работу для ученика, который ошибся в этом задании на тесте.
-      Нужны: ${tasksPerDifficulty * REQUIRED_DIFFICULTIES.length} задач (${tasksPerDifficulty} easy, ${tasksPerDifficulty} medium, ${tasksPerDifficulty} hard).
-      Каждая задача должна содержать подробное решение и итоговый ответ.
+Subject: ${subjectName}
+Exam task number: ${taskNumber}
+Topic name: ${topicName}
+
+Generate homework for a student who made mistakes in this task number.
+Need exactly ${
+      tasksPerDifficulty * REQUIRED_DIFFICULTIES.length
+    } tasks: ${tasksPerDifficulty} easy, ${tasksPerDifficulty} medium, ${tasksPerDifficulty} hard.
+Each task must include a detailed solution and final answer.
 `;
 
     let lastError = null;
@@ -124,6 +129,14 @@ class AIService {
     }
   }
 
+  hasVisualDependency(statementLatex) {
+    const normalized = String(statementLatex || '').toLowerCase();
+
+    return /(по график|на рисун|по рисун|диаграмм|чертеж|схем|graph|figure|diagram|plot|drawing)/i.test(
+      normalized
+    );
+  }
+
   normalizeHomeworkPayload(payload, tasksPerDifficulty) {
     if (!payload || typeof payload !== 'object') {
       throw new Error('Invalid homework payload');
@@ -148,15 +161,23 @@ class AIService {
         ? String(task.difficulty).trim().toLowerCase()
         : fallbackDifficulty;
 
-      const statementLatex = String(
-        task?.statementLatex || task?.questionLatex || ''
-      ).trim();
-      const solutionLatex = String(task?.solutionLatex || '').trim();
-      const answerLatex = String(task?.answerLatex || task?.answer || '').trim();
-      const imageSvg = this.normalizeSvg(task?.imageSvg);
+      const statementLatex = normalizeLatexText(
+        String(task?.statementLatex || task?.questionLatex || '')
+      );
+      const solutionLatex = normalizeLatexText(String(task?.solutionLatex || ''));
+      const answerLatex = normalizeLatexText(
+        String(task?.answerLatex || task?.answer || '')
+      );
+      const imageSvg = normalizeSvg(task?.imageSvg);
 
       if (!statementLatex || !solutionLatex || !answerLatex) {
         throw new Error('AI returned incomplete task data');
+      }
+
+      if (this.hasVisualDependency(statementLatex) && !imageSvg) {
+        throw new Error(
+          'AI returned a visually-dependent task without imageSvg'
+        );
       }
 
       return {
@@ -177,30 +198,12 @@ class AIService {
       }
     }
 
-    const title = String(payload.title || '').trim();
+    const title = normalizeLatexText(String(payload.title || ''));
 
     return {
-      title: title || 'AI-домашняя работа',
+      title: title || 'AI homework',
       tasks
     };
-  }
-
-  normalizeSvg(svgValue) {
-    if (!svgValue || typeof svgValue !== 'string') {
-      return null;
-    }
-
-    const cleaned = svgValue.trim();
-
-    if (!cleaned) {
-      return null;
-    }
-
-    if (!cleaned.startsWith('<svg')) {
-      return null;
-    }
-
-    return cleaned;
   }
 }
 

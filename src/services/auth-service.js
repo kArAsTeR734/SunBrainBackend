@@ -48,6 +48,7 @@ class AuthService {
         }
 
         const tokens = TokenService.generateTokens(user);
+        await UserModel.updateRefreshToken(user.id, tokens.refreshToken);
 
         return {
             user: {
@@ -82,8 +83,8 @@ class AuthService {
         }
 
         const tokens = TokenService.generateTokens(userFromDb);
-        await UserModel.updateRefreshToken(userFromDb.id, tokens.refreshToken);
 
+        await UserModel.updateRefreshToken(userFromDb.id, tokens.refreshToken);
         return {
             user: {
                 id: userFromDb.id,

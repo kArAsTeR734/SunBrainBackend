@@ -61,7 +61,7 @@ app.use('/api/topics', topicRouter)
 app.use('/api/test', testRouter)
 app.use('/api/ai', aiRouter);
 
-app.use((error, req, res, next) => {
+app.use((error, req, res) => {
     console.error('Ошибка:', error);
 
     const status = error.status || 500;

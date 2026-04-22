@@ -72,6 +72,39 @@ class TaskController {
       );
     }
   }
+
+  static async getTaskList(req, res) {
+    try {
+      const {topicId} = req.body;
+
+      if(!topicId){
+        return res.status(404).json(
+          errorResponse('Не указан topicId')
+        );
+      }
+
+      const tasks = await TaskService.getTasksByTopicId(topicId);
+
+      return res.status(200).json(
+        successResponse(tasks)
+      );
+
+    } catch (error) {
+      console.log(error);
+
+      let status = 500;
+      let message = 'Failed to get Tasks';
+
+      if (error.message === 'Tasks not found') {
+        status = 404;
+        message = 'Task not found';
+      }
+
+      return res.status(status).json(
+        errorResponse(message)
+      );
+    }
+  }
 }
 
 export default TaskController;

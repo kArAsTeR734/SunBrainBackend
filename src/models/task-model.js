@@ -45,6 +45,18 @@ export default class TaskModel {
     return rows[0];
   }
 
+  static async getTasksByTopicId(topicId){
+    const query = `
+    SELECT id, content, original_tex, difficulty, answer_format, topic_id, points
+      FROM tasks
+      WHERE topic_id = $1
+    `;
+
+    const { rows } = await pool.query(query, [taskId]);
+
+    return rows[0];
+  }
+
   static async getTaskByIdForCheck(taskId) {
     const query = `
       SELECT id, correct_answer, points

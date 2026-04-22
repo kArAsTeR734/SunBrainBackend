@@ -1,10 +1,10 @@
 import TaskModel from '../models/task-model.js';
 import HomeworkAnswerModel from '../models/homework-answer-model.js';
 import pool from '../config/db.js';
-import { normalizeTaskContent } from '../utils/task-content-utils.js';
+import {normalizeTaskContent} from '../utils/task-content-utils.js';
 
 class TaskService {
-  static TEST_TASK_NUMBERS = Array.from({ length: 12 }, (_, index) => index + 1);
+  static TEST_TASK_NUMBERS = Array.from({length: 12}, (_, index) => index + 1);
 
   static TEST_SUBJECT_CODES = ['emath', 'omath', 'ephysic', 'ophysic'];
 
@@ -20,7 +20,7 @@ class TaskService {
     return String(value ?? '').trim().toLowerCase();
   }
 
-  static async checkTaskAnswer({ userId, taskId, answer }) {
+  static async checkTaskAnswer({userId, taskId, answer}) {
     if (!userId) {
       throw new Error('User is not authenticated');
     }
@@ -97,6 +97,22 @@ class TaskService {
 
     return {
       task
+    };
+  }
+
+  static async getTasksByTopicId(topicId) {
+    if (!topicId) {
+      throw new Error("topicId is not found and required in this method");
+    }
+
+    const tasks = await TaskModel.getTasksByTopicId(topicId);
+
+    if (!tasks) {
+      throw new Error("Tasks for this theme non founded");
+    }
+
+    return {
+      catalogTasks: tasks
     };
   }
 
@@ -219,9 +235,9 @@ class TaskService {
     const maxPossibleTotalTasks = hasMissingNumbers
       ? 0
       : numbers.reduce(
-          (sum, item) => sum + Math.max(item.maxSelectableForTest, 0),
-          0
-        );
+        (sum, item) => sum + Math.max(item.maxSelectableForTest, 0),
+        0
+      );
 
     const canBuildTarget =
       !hasMissingNumbers &&

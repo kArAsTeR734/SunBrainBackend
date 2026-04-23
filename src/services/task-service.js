@@ -1,6 +1,6 @@
 import TaskModel from '../models/task-model.js';
 import HomeworkAnswerModel from '../models/homework-answer-model.js';
-import pool from '../config/db.js';
+import pool from '../../db.js';
 import {normalizeTaskContent} from '../utils/task-content-utils.js';
 
 class TaskService {
@@ -100,12 +100,12 @@ class TaskService {
     };
   }
 
-  static async getTasksByTopicId(topicId) {
-    if (!topicId) {
+  static async getTasksByTopicId(themeId) {
+    if (!themeId) {
       throw new Error("topicId is not found and required in this method");
     }
 
-    const tasks = await TaskModel.getTasksByTopicId(topicId);
+    const tasks = await TaskModel.getTasksByTopicId(themeId);
 
     if (!tasks) {
       throw new Error("Tasks for this theme non founded");

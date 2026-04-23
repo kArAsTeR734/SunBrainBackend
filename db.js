@@ -4,11 +4,15 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const client = new Client({
-    connectionString: `postgresql://postgres:root@localhost:5432/SunBrain_dev`,
+  host: process.env.DB_HOST,
+  port: Number(process.env.DB_PORT),
+  database: process.env.DB_NAME,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
 });
 
 client.connect()
-    .then(() => console.log('✅ PostgreSQL подключён через connection string'))
+    .then(() => console.log('✅ PostgreSQL подключён через Docker'))
     .catch(err => {
         console.error('❌ Ошибка подключения:', err.message);
         console.log('\n🔧 Проверьте:');

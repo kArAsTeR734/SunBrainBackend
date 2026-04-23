@@ -1,4 +1,4 @@
-import pool from '../config/db.js';
+import pool from '../../db.js';
 
 class LeaderboardModel {
   static async getTopUsers() {

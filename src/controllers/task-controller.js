@@ -75,15 +75,15 @@ class TaskController {
 
   static async getTaskList(req, res) {
     try {
-      const {topicId} = req.body;
+      const {themeId} = req.params;
 
-      if(!topicId){
+      if(!themeId){
         return res.status(404).json(
           errorResponse('Не указан topicId')
         );
       }
 
-      const tasks = await TaskService.getTasksByTopicId(topicId);
+      const tasks = await TaskService.getTasksByTopicId(themeId);
 
       return res.status(200).json(
         successResponse(tasks)

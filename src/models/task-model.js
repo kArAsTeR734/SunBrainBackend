@@ -1,4 +1,4 @@
-import pool from '../config/db.js';
+import pool from '../../db.js';
 
 export default class TaskModel {
   static topicsSubjectColumn = null;
@@ -45,16 +45,15 @@ export default class TaskModel {
     return rows[0];
   }
 
-  static async getTasksByTopicId(topicId){
+  static async getTasksByTopicId(themeId){
     const query = `
-    SELECT id, content, original_tex, difficulty, answer_format, topic_id, points
-      FROM tasks
+    SELECT * FROM tasks
       WHERE topic_id = $1
     `;
 
-    const { rows } = await pool.query(query, [taskId]);
+    const { rows } = await pool.query(query, [themeId]);
 
-    return rows[0];
+    return rows;
   }
 
   static async getTaskByIdForCheck(taskId) {
@@ -70,9 +69,8 @@ export default class TaskModel {
 
   static async getByNumber(taskNumber, subjectId) {
     const subjectColumn = await this.resolveTopicsSubjectColumn();
-    let query = '';
     let params = [taskNumber, subjectId];
-
+    let query = ''
     if (subjectColumn === 'subject_id') {
       query = `
       SELECT 

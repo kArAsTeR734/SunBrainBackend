@@ -1,4 +1,4 @@
-import pool from '../config/db.js';
+import pool from '../../db.js';
 
 export default class TopicModel {
 
@@ -17,18 +17,18 @@ export default class TopicModel {
     return rows;
   }
 
-  static async getTopicsByHomeworkId(homeworkId) {
-    const query = `
-    SELECT 
-      id,
-      number,
-      name,
-      subject_code
-    FROM topics
-    JOIN 
-    WHERE subject_code = $1
-    ORDER BY number; 
-  `;
-  }
+  // static async getTopicsByHomeworkId(homeworkId) {
+  //   const query = `
+  //   SELECT
+  //     id,
+  //     number,
+  //     name,
+  //     subject_code
+  //   FROM topics
+  //   JOIN
+  //   WHERE subject_code = $1
+  //   ORDER BY number;
+  // `;
+  // }
 
 }
